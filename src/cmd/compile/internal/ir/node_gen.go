@@ -900,6 +900,34 @@ func (n *InstExpr) editChildrenWithHidden(edit func(Node) Node) {
 	editNtypes(n.Targs, edit)
 }
 
+func (n *IfaceKeyExpr) Format(s fmt.State, verb rune) { fmtNode(n, s, verb) }
+func (n *IfaceKeyExpr) copy() Node {
+	c := *n
+	c.init = copyNodes(c.init)
+	return &c
+}
+func (n *IfaceKeyExpr) doChildren(do func(Node) bool) bool {
+	if doNodes(n.init, do) {
+		return true
+	}
+	if n.Value != nil && do(n.Value) {
+		return true
+	}
+	return false
+}
+func (n *IfaceKeyExpr) editChildren(edit func(Node) Node) {
+	editNodes(n.init, edit)
+	if n.Value != nil {
+		n.Value = edit(n.Value).(Node)
+	}
+}
+func (n *IfaceKeyExpr) editChildrenWithHidden(edit func(Node) Node) {
+	editNodes(n.init, edit)
+	if n.Value != nil {
+		n.Value = edit(n.Value).(Node)
+	}
+}
+
 func (n *JumpTableStmt) Format(s fmt.State, verb rune) { fmtNode(n, s, verb) }
 func (n *JumpTableStmt) copy() Node {
 	c := *n

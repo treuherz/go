@@ -5,14 +5,13 @@
 package noder
 
 import (
-	"fmt"
-	"internal/pkgbits"
-
 	"cmd/compile/internal/base"
 	"cmd/compile/internal/ir"
 	"cmd/compile/internal/syntax"
 	"cmd/compile/internal/types"
 	"cmd/compile/internal/types2"
+	"fmt"
+	"internal/pkgbits"
 )
 
 // This file implements the Unified IR package writer and defines the
@@ -2119,6 +2118,7 @@ func (w *writer) compLit(lit *syntax.CompositeLit) {
 	}
 	var keyType, elemType types2.Type
 	var structType *types2.Struct
+	var ifaceType *types2.Interface
 	switch typ0 := typ; typ := types2.CoreType(typ).(type) {
 	default:
 		w.p.fatalf(lit, "unexpected composite literal type: %v", typ)
@@ -2131,12 +2131,15 @@ func (w *writer) compLit(lit *syntax.CompositeLit) {
 		elemType = typ.Elem()
 	case *types2.Struct:
 		structType = typ
+	case *types2.Interface:
+		ifaceType = typ
 	}
 
 	w.Len(len(lit.ElemList))
 	for i, elem := range lit.ElemList {
 		elemType := elemType
-		if structType != nil {
+		switch {
+		case structType != nil:
 			if kv, ok := elem.(*syntax.KeyValueExpr); ok {
 				// use position of expr.Key rather than of elem (which has position of ':')
 				w.pos(kv.Key)
@@ -2147,7 +2150,17 @@ func (w *writer) compLit(lit *syntax.CompositeLit) {
 			}
 			elemType = structType.Field(i).Type()
 			w.Len(i)
-		} else {
+		case ifaceType != nil:
+			kv, ok := elem.(*syntax.KeyValueExpr)
+			if !ok {
+				w.p.errorf(elem, "missing method name in interface literal")
+			}
+			w.pos(kv.Key)
+			i = methodIndex(w.p.info, ifaceType, kv.Key.(*syntax.Name))
+			elem = kv.Value
+			elemType = ifaceType.Method(i).Type()
+			w.Len(i)
+		default:
 			if kv, ok := elem.(*syntax.KeyValueExpr); w.Bool(ok) {
 				// use position of expr.Key rather than of elem (which has position of ':')
 				w.pos(kv.Key)
@@ -2690,6 +2703,19 @@ func fieldIndex(info *types2.Info, str *types2.Struct, key *syntax.Name) int {
 	}
 
 	panic(fmt.Sprintf("%s: %v is not a field of %v", key.Pos(), field, str))
+}
+
+// methodIndex returns the index of the interface method named by key.
+func methodIndex(info *types2.Info, iface *types2.Interface, key *syntax.Name) int {
+	meth := info.Uses[key].(*types2.Func)
+
+	for i := 0; i < iface.NumMethods(); i++ {
+		if iface.Method(i) == meth {
+			return i
+		}
+	}
+
+	panic(fmt.Sprintf("%s: %v is not a method of %v", key.Pos(), meth, iface))
 }
 
 // objTypeParams returns the type parameters on the given object.

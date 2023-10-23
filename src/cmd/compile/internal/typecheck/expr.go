@@ -329,6 +329,41 @@ func tcCompLit(n *ir.CompLitExpr) (res ir.Node) {
 		}
 
 		n.SetOp(ir.OSTRUCTLIT)
+	case types.TINTER:
+		if nokeys(n.List) {
+			base.Errorf("interface literal must specify method names %v", n)
+		} else {
+			hash := make(map[string]bool)
+			errored := false
+
+			ls := n.List
+			for i, n := range ls {
+				ir.SetPos(n)
+
+				kv, ok := n.(*ir.KeyExpr)
+				if !ok {
+					if !errored {
+						base.Errorf("interface literal must specify all method names %v", n)
+						errored = true
+					}
+					ls[i] = Expr(n)
+					continue
+				}
+
+				ik := tcInterLitKey(t, kv)
+				if ik == nil {
+					continue
+				}
+
+				fielddup(ik.Sym().Name, hash)
+
+				// No pushtype allowed here. Tried and rejected.
+				ik.Value = Expr(ik.Value)
+				ls[i] = ik
+			}
+		}
+
+		n.SetOp(ir.OINTERLIT)
 	}
 
 	return n
@@ -379,6 +414,40 @@ func tcStructLitKey(typ *types.Type, kv *ir.KeyExpr) *ir.StructKeyExpr {
 	}
 	ep = append(ep, sym.Name)
 	base.Errorf("cannot use promoted field %v in struct literal of type %v", strings.Join(ep, "."), typ)
+	return nil
+}
+
+// tcInterLitKey typechecks an OKEY node that appeared within an
+// interface literal.
+func tcInterLitKey(typ *types.Type, kv *ir.KeyExpr) *ir.IfaceKeyExpr {
+	key := kv.Key
+
+	sym := key.Sym()
+
+	// An OXDOT uses the Sym field to hold
+	// the field to the right of the dot,
+	// so s will be non-nil, but an OXDOT
+	// is never a valid struct literal key.
+	if sym == nil || sym.Pkg != types.LocalPkg || key.Op() == ir.OXDOT || sym.IsBlank() {
+		base.Errorf("invalid method name %v in interface initializer", key)
+		return nil
+	}
+
+	if f := Lookdot1(nil, sym, typ, typ.Fields(), 0); f != nil {
+		return ir.NewIfaceKeyExpr(kv.Pos(), f, kv.Value)
+	}
+
+	if ci := Lookdot1(nil, sym, typ, typ.Fields(), 2); ci != nil { // Case-insensitive lookup.
+		if visible(ci.Sym) {
+			base.Errorf("unknown method '%v' in interface literal of type %v (but does have %v)", sym, typ, ci.Sym)
+		} else if nonexported(sym) && sym.Name == ci.Sym.Name { // Ensure exactness before the suggestion.
+			base.Errorf("cannot refer to unexported method '%v' in interface literal of type %v", sym, typ)
+		} else {
+			base.Errorf("unknown method '%v' in interface literal of type %v", sym, typ)
+		}
+		return nil
+	}
+
 	return nil
 }
 

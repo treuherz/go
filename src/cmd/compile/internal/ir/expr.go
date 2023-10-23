@@ -220,7 +220,7 @@ func (n *CompLitExpr) SetOp(op Op) {
 	switch op {
 	default:
 		panic(n.no("SetOp " + op.String()))
-	case OARRAYLIT, OCOMPLIT, OMAPLIT, OSTRUCTLIT, OSLICELIT:
+	case OARRAYLIT, OCOMPLIT, OMAPLIT, OSTRUCTLIT, OSLICELIT, OINTERLIT:
 		n.op = op
 	}
 }
@@ -333,7 +333,7 @@ func NewKeyExpr(pos src.XPos, key, value Node) *KeyExpr {
 	return n
 }
 
-// A StructKeyExpr is an Field: Value composite literal key.
+// A StructKeyExpr is a Field: Value struct composite literal key.
 type StructKeyExpr struct {
 	miniExpr
 	Field *types.Field
@@ -348,6 +348,22 @@ func NewStructKeyExpr(pos src.XPos, field *types.Field, value Node) *StructKeyEx
 }
 
 func (n *StructKeyExpr) Sym() *types.Sym { return n.Field.Sym }
+
+// An IfaceKeyExpr is a Method: Value interface composite literal key.
+type IfaceKeyExpr struct {
+	miniExpr
+	Method *types.Field
+	Value  Node
+}
+
+func NewIfaceKeyExpr(pos src.XPos, field *types.Field, value Node) *IfaceKeyExpr {
+	n := &IfaceKeyExpr{Method: field, Value: value}
+	n.pos = pos
+	n.op = OMETHNAME
+	return n
+}
+
+func (n *IfaceKeyExpr) Sym() *types.Sym { return n.Method.Sym }
 
 // An InlinedCallExpr is an inlined function call.
 type InlinedCallExpr struct {

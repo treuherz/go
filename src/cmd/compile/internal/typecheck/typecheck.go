@@ -1464,7 +1464,7 @@ func fmtSignature(nl ir.Nodes, isddd bool) string {
 // type check composite.
 func fielddup(name string, hash map[string]bool) {
 	if hash[name] {
-		base.Errorf("duplicate field name in struct literal: %s", name)
+		base.Errorf("duplicate field name in composite literal: %s", name)
 		return
 	}
 	hash[name] = true

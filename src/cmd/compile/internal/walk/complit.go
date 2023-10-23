@@ -105,7 +105,7 @@ func getdyn(n ir.Node, top bool) initGenType {
 			return initDynamic
 		}
 
-	case ir.OARRAYLIT, ir.OSTRUCTLIT:
+	case ir.OARRAYLIT, ir.OSTRUCTLIT, ir.OINTERLIT:
 	}
 	lit := n.(*ir.CompLitExpr)
 
@@ -116,6 +116,8 @@ func getdyn(n ir.Node, top bool) initGenType {
 			n1 = n1.(*ir.KeyExpr).Value
 		case ir.OSTRUCTKEY:
 			n1 = n1.(*ir.StructKeyExpr).Value
+		case ir.OMETHNAME:
+			n1 = n1.(*ir.IfaceKeyExpr).Value
 		}
 		mode |= getdyn(n1, false)
 		if mode == initDynamic|initConst {
@@ -217,6 +219,12 @@ func fixedlit(ctxt initContext, kind initKind, n *ir.CompLitExpr, var_ ir.Node, 
 			if r.Sym().IsBlank() || isBlank {
 				return ir.BlankNode, r.Value
 			}
+			ir.SetPos(r)
+			return ir.NewSelectorExpr(base.Pos, ir.ODOT, var_, r.Sym()), r.Value
+		}
+	case ir.OINTERLIT:
+		splitnode = func(rn ir.Node) (ir.Node, ir.Node) {
+			r := rn.(*ir.IfaceKeyExpr)
 			ir.SetPos(r)
 			return ir.NewSelectorExpr(base.Pos, ir.ODOT, var_, r.Sym()), r.Value
 		}

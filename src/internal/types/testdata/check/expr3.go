@@ -215,6 +215,17 @@ func struct_literals() {
 	}
 }
 
+func interface_literals() {
+	m := func() {}
+
+	// keyed elements
+	_ = I{m: func() {}}
+	_ = I{m: m}
+
+	// unkeyed elements
+	_ = I{m /* ERROR "missing method name in interface literal" */}
+}
+
 func array_literals() {
 	type A0 [0]int
 	_ = A0{}

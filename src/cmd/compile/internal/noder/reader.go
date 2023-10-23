@@ -3002,15 +3002,20 @@ func (r *reader) compLit() ir.Node {
 		rtype = r.rtype(pos)
 	}
 	isStruct := typ.Kind() == types.TSTRUCT
+	isIface := typ.Kind() == types.TINTER
 
 	elems := make([]ir.Node, r.Len())
 	for i := range elems {
 		elemp := &elems[i]
 
-		if isStruct {
+		switch {
+		case isStruct:
 			sk := ir.NewStructKeyExpr(r.pos(), typ.Field(r.Len()), nil)
 			*elemp, elemp = sk, &sk.Value
-		} else if r.Bool() {
+		case isIface:
+			ik := ir.NewIfaceKeyExpr(r.pos(), typ.Methods().Index(r.Len()), nil)
+			*elemp, elemp = ik, &ik.Value
+		case r.Bool():
 			kv := ir.NewKeyExpr(r.pos(), r.expr(), nil)
 			*elemp, elemp = kv, &kv.Value
 		}

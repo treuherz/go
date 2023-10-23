@@ -214,6 +214,12 @@ func (e *escape) exprSkipInit(k hole, n ir.Node) {
 			e.expr(k.note(n, "struct literal element"), elt.(*ir.StructKeyExpr).Value)
 		}
 
+	case ir.OINTERLIT:
+		n := n.(*ir.CompLitExpr)
+		for _, elt := range n.List {
+			e.expr(k.note(n, "interface literal element"), elt.(*ir.IfaceKeyExpr).Value)
+		}
+
 	case ir.OMAPLIT:
 		n := n.(*ir.CompLitExpr)
 		e.spill(k, n)

@@ -670,7 +670,7 @@ func exprFmt(n Node, s fmt.State, prec int) {
 		n := n.(*AddrExpr)
 		fmt.Fprintf(s, "&%v", n.X)
 
-	case OSTRUCTLIT, OARRAYLIT, OSLICELIT, OMAPLIT:
+	case OSTRUCTLIT, OARRAYLIT, OSLICELIT, OMAPLIT, OINTERLIT:
 		n := n.(*CompLitExpr)
 		if !exportFormat {
 			fmt.Fprintf(s, "%v{%s}", n.Type(), ellipsisIf(len(n.List) != 0))

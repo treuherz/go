@@ -1474,7 +1474,46 @@ func (check *Checker) exprInternal(x *operand, e syntax.Expr, hint Type) exprKin
 					// ok to continue
 				}
 			}
-
+		case *Interface:
+			// TODO: deal with case where not yet set up
+			if len(e.ElemList) == 0 && len(utyp.methods) != 0 {
+				check.error(e, InvalidIfaceLit, "no method elements in literal for non-empty interface")
+				break
+			}
+			// Convention for error messages on invalid interface literals:
+			// we mention the interface type only if it clarifies the error
+			// (e.g., a duplicate method error doesn't need the interface type).
+			methods := utyp.methods
+			// all elements must have keys
+			visited := make([]bool, len(methods))
+			for _, e := range e.ElemList {
+				kv, ok := e.(*syntax.KeyValueExpr)
+				if !ok {
+					check.error(e, InvalidIfaceLit, "missing method name in interface literal")
+					continue
+				}
+				key, _ := kv.Key.(*syntax.Name)
+				// do all possible checks early (before exiting due to errors)
+				// so we don't drop information on the floor
+				check.expr(x, kv.Value)
+				if key == nil {
+					check.errorf(kv, InvalidLitField, "invalid method name %s in interface literal", kv.Key)
+					continue
+				}
+				i, fn := lookupMethod(utyp.methods, check.pkg, key.Value, false)
+				if i < 0 {
+					check.errorf(kv.Key, MissingLitField, "unknown method %s in interface literal of type %s", key.Value, base)
+					continue
+				}
+				check.recordUse(key, fn)
+				check.assignment(x, fn.typ, "interface literal")
+				// 0 <= i < len(fields)
+				if visited[i] {
+					check.errorf(kv, DuplicateLitField, "duplicate method name %s in interface literal", key.Value)
+					continue
+				}
+				visited[i] = true
+			}
 		case *Array:
 			// Prevent crash if the array referred to is not yet set up. Was go.dev/issue/18643.
 			// This is a stop-gap solution. Should use Checker.objPath to report entire

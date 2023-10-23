@@ -602,6 +602,20 @@ const (
 	//  var _ = struct{i, j int}{1,2,3}
 	InvalidStructLit
 
+	// InvalidIfaceLit occurs when an interface literal has no method values for
+	// a non-empty interface, or when a method name is missing.
+	//
+	// Example:
+	// 	type I interface { m() }
+	//
+	//  var _ = I{}
+	//
+	// Example:
+	// 	type I interface { m() }
+	//
+	//  var _ = I{ func() {} }
+	InvalidIfaceLit
+
 	// MissingLitField occurs when a struct literal refers to a field that does
 	// not exist on the struct type.
 	//

@@ -166,6 +166,7 @@ const (
 	OSTRUCTLIT // Type{List} (composite literal, Type is struct)
 	OARRAYLIT  // Type{List} (composite literal, Type is array)
 	OSLICELIT  // Type{List} (composite literal, Type is slice), Len is slice length.
+	OINTERLIT  // Type{List} (composite literal, Type is interface)
 	OPTRLIT    // &X (X is composite literal)
 	OCONV      // Type(X) (type conversion)
 	OCONVIFACE // Type(X) (type conversion, to interface)
@@ -252,6 +253,7 @@ const (
 	OUNSAFESLICEDATA  // unsafe.SliceData(X)
 	OUNSAFESTRING     // unsafe.String(X, Y)
 	OUNSAFESTRINGDATA // unsafe.StringData(X)
+	OMETHNAME         // X(Args) (method expression T.Method(args), first argument is the method receiver)
 	OMETHEXPR         // X(Args) (method expression T.Method(args), first argument is the method receiver)
 	OMETHVALUE        // X.Sel   (method expression t.Method, not called)
 
